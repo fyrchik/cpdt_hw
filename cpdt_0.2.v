@@ -45,7 +45,7 @@ Module ex2.
       -> (exists z, q z (f z)).
   Proof.
     
-  Qed.
+Abort.
 End ex2.
 
 Module ex3.
@@ -66,3 +66,18 @@ Module ex3.
     inversion 1; apply even_mult_r; auto 11.
   Qed.
 End ex3.
+
+Module ex4.
+  Definition var := nat.
+
+  Inductive exp : Set :=
+    | eConst : var -> exp
+    | eAdd : var -> var -> exp
+    | ePair : exp -> exp -> exp
+    | eFst : exp -> exp
+    | eSnd : exp -> exp
+    | eVar : nat -> exp.
+
+  Inductive cmd : Set :=
+    | cAss : 
+End ex4.

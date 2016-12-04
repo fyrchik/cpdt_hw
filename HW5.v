@@ -154,6 +154,28 @@ That let crush get a bit farther, and suggested the next lemma I would need to
 prove.
 *)
 
+Section subsequence.
+  Variable T : Type.
+
+(* 1st arg is subsequence of 2nd *)
+Inductive subsequence : list T -> list T -> Prop :=
+  | sNil : forall l, subsequence nil l
+  | sTail : forall (b : T) (l l1 : list T), subsequence l l1 -> subsequence l (b :: l1)
+  | sHead : forall (a b : T) (l l1 : list T), a = b -> subsequence l l1 -> subsequence (cons a l) (cons b l1).
+
+Hint Constructors subsequence.
+
+Hypothesis sub_nil_any : forall l, subsequence l nil -> forall l1, subsequence l l1.
+Hypothesis sub_weak : forall a l l1, subsequence (a :: l) l1 -> subsequence l l1.
+Hint Resolve sub_nil_any.
+
+Theorem subsequence_trans : forall l l1, subsequence l l1 -> forall l2, subsequence l1 l2 ->
+    subsequence l l2.
+Proof.
+  induction 2; crush. inversion H; crush. inversion H2; crush. inversion H; crush.
+
+Qed.
+
 (* I'm not really sure why we're not getting this notation for free, actually.
 But we're not, se here it is for convenience. *)
 Notation "[ ]" := nil.
