@@ -82,6 +82,34 @@ sequence starting at 5 eventually cycles.
 Don't forget about "Hint Constructors" and "auto n" when creating proofs about
 constants!
 *)
+Print even.
+
+(* sequence, starting with n reaches k *)
+Inductive collatz_reaches : nat -> nat -> Prop :=
+  | obv : forall k : nat, collatz_reaches k k
+  | evC : forall k n : nat, even n -> collatz_reaches k (n / 2) ->
+      collatz_reaches k n
+  | odC : forall k n : nat, odd n -> collatz_reaches k (3 * n + 1) ->
+      collatz_reaches k n.
+
+Inductive collatz_cycles (n : nat) : Prop :=
+  | Cev : (exists k, even k /\
+      collatz_reaches k n /\ collatz_reaches k (k / 2)) -> collatz_cycles n
+  | Cod : (exists k, odd k /\
+      collatz_reaches k n /\ collatz_reaches k (3 * k + 1)) -> collatz_cycles n.
+
+Hint Constructors collatz_reaches.
+
+Theorem cc5 : collatz_cycles 5.
+Proof.
+  apply Cev; exists 4; split.
+    auto 5. 
+  split. apply odC; auto 6.
+  simpl; apply evC; auto 17.
+  simpl; apply evC; auto 9.
+  simpl; apply evC; auto 5.
+  simpl; apply odC; auto 2.
+Qed.
 
 (* (45 minutes) We say a list A is a "subsequence" of a list B when you can
 produce list A by deleting some elements from list B.  For example, [1,2,3] is
