@@ -37,6 +37,7 @@ End ex1.
   is a constant symbol, p is a unary predicate symbol, q is a binary predicate symbol,
   and f is a unary function symbol
 *)
+
 Module ex2.
   Variable (T : Set) (x : T) (f : T -> T) (p : T -> Prop) (q : T -> T -> Prop).
   Theorem tt : p x
@@ -44,8 +45,19 @@ Module ex2.
       -> (forall t y, q t y -> q y (f y))
       -> (exists z, q z (f z)).
   Proof.
-    
-Abort.
+(* 1) if edestruct was permitted: *)
+(*    edestruct 2; [ eassumption | exists x0; apply H2 in H1; assumption ]. *)
+
+(* 2) apply with manually constructed proof is also a solution *)
+    apply (
+      fun (a : p x)
+          (b : forall t, p t -> exists y, q t y)
+          (c : forall t y, q t y -> q y (f y)) =>
+        match b x a with
+        | ex_intro _ k l => ex_intro (fun z => q z (f z)) k (c x k l)
+        end
+    ).
+  Qed.
 End ex2.
 
 Module ex3.
@@ -68,16 +80,51 @@ Module ex3.
 End ex3.
 
 Module ex4.
+  Require Import Arith.
+
   Definition var := nat.
 
   Inductive exp : Set :=
-    | eConst : var -> exp
-    | eAdd : var -> var -> exp
+    | eConst : nat -> exp
+    | eAdd : nat -> nat -> exp
     | ePair : exp -> exp -> exp
     | eFst : exp -> exp
     | eSnd : exp -> exp
-    | eVar : nat -> exp.
+    | eVar : var -> exp.
 
-  Inductive cmd : Set :=
-    | cAss : 
+  Inductive cmd :=
+    | cExp : exp -> cmd
+    | cAss : var -> exp -> cmd -> cmd.
+
+  Definition map (T : Type) := var -> T.
+
+  Inductive valT :=
+    | vConst : nat -> valT
+    | vPair : valT -> valT -> valT.
+
+  Inductive assignT :=
+    | aVar : map valT -> assignT.
+
+  Inductive eval : exp -> assignT -> valT -> Prop :=
+    | evV : forall n t, eval (eConst n) t (vConst n)
+    | evA : forall n1 n2 t, eval (eAdd n1 n2) t (vConst (n1 + n2))
+    | evP : forall e1 e2 t v1 v2,
+        eval e1 t v1 -> eval e1 t v2 -> eval (ePair e1 e2) t (vPair v1 v2)
+    | evF : forall e1 e2 t v, eval e1 t v -> eval (ePair e1 e2) t v
+    | evS : forall e1 e2 t v, eval e2 t v -> eval (ePair e1 e2) t v
+    | evR : forall va (f : map valT) v, f va = v -> eval (eVar va) (aVar f) v.
+
+  Section example.
+    Variable a : assignT.
+    Example e : eval (eAdd 1 1) a (vConst 2). apply evA. Qed.
+  End example.
+
+  Inductive run : cmd -> assignT -> valT -> Prop :=
+    | ruE : forall e v t, eval e t v -> run (cExp e) t v
+    | ruV : forall vV vE c eV cV f,
+        eval vE (aVar f) eV ->
+        run c (aVar (fun n => if eq_nat_dec n vV then eV else f n)) cV ->
+        run (cAss vV vE c) (aVar f) cV.
+
+  
 End ex4.
