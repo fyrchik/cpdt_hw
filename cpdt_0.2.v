@@ -98,33 +98,47 @@ Module ex4.
 
   Definition map (T : Type) := var -> T.
 
-  Inductive valT :=
-    | vConst : nat -> valT
-    | vPair : valT -> valT -> valT.
+  Inductive valueType :=
+    | ConstValue : nat -> valueType
+    | PairValue : valueType -> valueType -> valueType.
 
-  Inductive assignT :=
-    | aVar : map valT -> assignT.
+  Inductive assignType :=
+    | Env : map valueType -> assignType.
 
-  Inductive eval : exp -> assignT -> valT -> Prop :=
-    | evV : forall n t, eval (eConst n) t (vConst n)
-    | evA : forall n1 n2 t, eval (eAdd n1 n2) t (vConst (n1 + n2))
+  Inductive eval : exp -> assignType -> valueType -> Prop :=
+    | evV : forall n t, eval (eConst n) t (ConstValue n)
+    | evA : forall n1 n2 t, eval (eAdd n1 n2) t (ConstValue (n1 + n2))
     | evP : forall e1 e2 t v1 v2,
-        eval e1 t v1 -> eval e1 t v2 -> eval (ePair e1 e2) t (vPair v1 v2)
+        eval e1 t v1 -> eval e1 t v2 -> eval (ePair e1 e2) t (PairValue v1 v2)
     | evF : forall e1 e2 t v, eval e1 t v -> eval (ePair e1 e2) t v
     | evS : forall e1 e2 t v, eval e2 t v -> eval (ePair e1 e2) t v
-    | evR : forall va (f : map valT) v, f va = v -> eval (eVar va) (aVar f) v.
+    | evR : forall va (f : map valueType) v, f va = v -> eval (eVar va) (Env f) v.
 
   Section example.
-    Variable a : assignT.
-    Example e : eval (eAdd 1 1) a (vConst 2). apply evA. Qed.
+    Variable a : assignType.
+    Example e : eval (eAdd 1 1) a (ConstValue 2). apply evA. Qed.
   End example.
 
-  Inductive run : cmd -> assignT -> valT -> Prop :=
+  Inductive run : cmd -> assignType -> valueType -> Prop :=
     | ruE : forall e v t, eval e t v -> run (cExp e) t v
     | ruV : forall vV vE c eV cV f,
-        eval vE (aVar f) eV ->
-        run c (aVar (fun n => if eq_nat_dec n vV then eV else f n)) cV ->
-        run (cAss vV vE c) (aVar f) cV.
+        eval vE (Env f) eV ->
+        run c (Env (fun n => if eq_nat_dec n vV then eV else f n)) cV ->
+        run (cAss vV vE c) (Env f) cV.
+
+  Inductive typeType :=
+    | ConstType : typeType
+    | PairType : typeType -> typeType -> typeType.
+
+  Inductive typingType :=
+    | Typing : map typeType -> typingType.
+
+  Fixpoint expT (e : exp) : typeType :=
+    match e with
+    | eConst _  => ConstType
+    | eAdd _ _ => ConstType
+    | ePair e1 e2 => PairType (expT e1) (expT e2)
+    end.
 
   
 End ex4.
