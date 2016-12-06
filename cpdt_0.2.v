@@ -98,28 +98,28 @@ Module ex4.
 
   Definition map (T : Type) := var -> T.
 
-  Inductive valueType :=
-    | ConstValue : nat -> valueType
-    | PairValue : valueType -> valueType -> valueType.
+  Inductive value :=
+    | ConstValue : nat -> value
+    | PairValue : value -> value -> value.
 
   Inductive assignType :=
-    | Env : map valueType -> assignType.
+    | Env : map value -> assignType.
 
-  Inductive eval : exp -> assignType -> valueType -> Prop :=
+  Inductive eval : exp -> assignType -> value -> Prop :=
     | evV : forall n t, eval (eConst n) t (ConstValue n)
     | evA : forall n1 n2 t, eval (eAdd n1 n2) t (ConstValue (n1 + n2))
     | evP : forall e1 e2 t v1 v2,
         eval e1 t v1 -> eval e1 t v2 -> eval (ePair e1 e2) t (PairValue v1 v2)
     | evF : forall e1 e2 t v, eval e1 t v -> eval (ePair e1 e2) t v
     | evS : forall e1 e2 t v, eval e2 t v -> eval (ePair e1 e2) t v
-    | evR : forall va (f : map valueType) v, f va = v -> eval (eVar va) (Env f) v.
+    | evR : forall va (f : map value) v, f va = v -> eval (eVar va) (Env f) v.
 
   Section example.
     Variable a : assignType.
     Example e : eval (eAdd 1 1) a (ConstValue 2). apply evA. Qed.
   End example.
 
-  Inductive run : cmd -> assignType -> valueType -> Prop :=
+  Inductive run : cmd -> assignType -> value -> Prop :=
     | ruE : forall e v t, eval e t v -> run (cExp e) t v
     | ruV : forall vV vE c eV cV f,
         eval vE (Env f) eV ->
@@ -133,11 +133,34 @@ Module ex4.
   Inductive typingType :=
     | Typing : map typeType -> typingType.
 
-  Fixpoint expT (e : exp) : typeType :=
+  Inductive isTypeOfExp : typingType -> typeType -> exp -> Prop :=
+    | isConst : forall t n, isTypeOfExp t ConstType (eConst n)
+    | isAdd : forall t n1 n2, isTypeOfExp t ConstType (eAdd n1 n2)
+    | isPair : forall t e1 t1, isTypeOfExp t t1 e1 -> forall e2 t2, isTypeOfExp t t2 e2 ->
+        isTypeOfExp t (PairType t1 t2) (ePair e1 e2)
+    | isFst : forall t e1 t1, isTypeOfExp t t1 e1 -> forall e2, isTypeOfExp t t1 (eFst (ePair e1 e2))
+    | isSnd : forall t e2 t2, isTypeOfExp t t2 e2 -> forall e1, isTypeOfExp t t2 (eSnd (ePair e1 e2))
+    | isVar : forall f v, isTypeOfExp (Typing f) (f v) (eVar v).
+
+  Inductive isTypeOfValue : typeType -> value -> Prop :=
+    | isC : forall n, isTypeOfValue ConstType (ConstValue n)
+    | isP : forall v1 t1, isTypeOfValue t1 v1 -> forall v2 t2, isTypeOfValue t2 v2 ->
+        isTypeOfValue (PairType t1 t2) (PairValue v1 v2).
+
+  Inductive isTypeOfCmd : typingType -> typeType -> cmd -> Prop :=
+    | isExp : forall t t1 e, isTypeOfExp t t1 e -> isTypeOfCmd t t1 (cExp e)
+    | isAss : forall f t1 e, isTypeOfExp (Typing f) t1 e ->
+        forall v c tc, isTypeOfCmd (Typing (fun m => if eq_nat_dec v m then t1 else f m)) tc c ->
+        isTypeOfCmd (Typing f) tc (cAss v e c).
+
+  Fixpoint expT (e : exp) (t : typingType) : typeType :=
     match e with
     | eConst _  => ConstType
     | eAdd _ _ => ConstType
-    | ePair e1 e2 => PairType (expT e1) (expT e2)
+    | ePair e1 e2 => PairType (expT e1 t) (expT e2 t)
+    | eFst (ePair e _) => expT e t
+    | eSnd (ePair _ e) => expT e t
+    | eVar v => match t with Typing f => f v end
     end.
 
   
