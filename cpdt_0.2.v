@@ -153,15 +153,10 @@ Module ex4.
         forall v c tc, isTypeOfCmd (Typing (fun m => if eq_nat_dec v m then t1 else f m)) tc c ->
         isTypeOfCmd (Typing f) tc (cAss v e c).
 
-  Fixpoint expT (e : exp) (t : typingType) : typeType :=
-    match e with
-    | eConst _  => ConstType
-    | eAdd _ _ => ConstType
-    | ePair e1 e2 => PairType (expT e1 t) (expT e2 t)
-    | eFst (ePair e _) => expT e t
-    | eSnd (ePair _ e) => expT e t
-    | eVar v => match t with Typing f => f v end
-    end.
+  Inductive varsType : assignType -> typingType -> Prop :=
+    | vtp : forall var fm tm v, fm var = v -> forall t, isTypeOfValue t v -> tm var = t ->
+        varsType (Env fm) (Typing tm).
 
-  
+  Require Import Cpdt.CpdtTactics.
+
 End ex4.
