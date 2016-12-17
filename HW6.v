@@ -563,8 +563,18 @@ Chose R to be (fun y1 ... yl =>
 (* Exercise (medium): prove that ...*)
 Theorem map_iterate : forall (A:Type) (f:A->A) (x:A),
                        stream_eq (iterate f (f x)) (map f (iterate f x)).
-Proof. 
-Admitted.
+Proof.
+  cofix; intros.
+  apply (stream_eq_coind (fun s1 s2 : stream A => exists f : A -> A, exists x : A,
+       s1 = iterate f (f x) /\ s2 = map f (iterate f x))). Guarded.
+  intros. inversion H as [fe [xe ?]]. inversion_clear H0.
+    rewrite H1; rewrite H2. reflexivity.
+  Guarded.
+  intros. inversion H as [fe [xe ?]]; inversion_clear H0. exists fe, (fe xe). rewrite H1, H2.
+    constructor; reflexivity.
+  Guarded.
+    exists f, x. constructor; reflexivity. Guarded.
+Qed.
 
 (* Exercise: Define a co-inductive type Nat containing non-standard
 natural numbers - this is, verifying
@@ -574,12 +584,67 @@ exists m : Nat, forall n : Nat, n < m. *)
    relation using the co-induction principle.  (Hint: try reflexivity
    first, then symmetry, then transitivity.) *)
 
+Section stream_eq_eqv.
+  Variable A : Type.
+
+  Theorem stream_eq_refl : forall (s : stream A), stream_eq s s.
+  Proof. (* it is longer with coinduction *)
+    cofix; intros; destruct s; constructor. apply stream_eq_refl.
+  Qed.
+
+  Theorem stream_eq_symm : forall (s1 s2 : stream A), stream_eq s2 s1 -> stream_eq s1 s2.
+  Proof.
+    cofix; apply (stream_eq_coind (fun s1 s2 : stream A => stream_eq s2 s1));
+    intros; destruct s1; destruct s2; inversion H; [ reflexivity | simpl; assumption ].
+  Qed.
+
+  (* tried to make this predicate 2-arity *)
+  Theorem stream_eq_trans : forall (s1 s3: stream A), (exists s2, stream_eq s1 s2 /\ stream_eq s2 s3) -> stream_eq s1 s3.
+  Proof.
+    cofix;
+    apply (stream_eq_coind (fun s1 s3 => exists s2, stream_eq s1 s2 /\ stream_eq s2 s3)); 
+    intros; inversion H as [x H0]; inversion H0 as [H1 H2]; destruct x, s1, s2;
+    inversion H1; inversion H2; [ reflexivity | exists x; auto ].
+  Qed.
+End stream_eq_eqv.
+
 (* Exercise: Provide a suitable definition of "being an ordered list"
    for infinite lists and define a principle (similar to the Park
    principle) for proving that an infinite list is ordered.  Apply
-   this method to the stream [nats].  
+   this method to the stream [nats].
 
    Hint: There are different ways of formulating the definition.  If
    you find yourself having trouble proving things, back up and see if
    you can state the definition a different way. *)
 
+CoInductive ordered : stream nat -> Prop :=
+  | OrdCons : forall s a, a <= head s -> ordered s -> ordered (Cons a s).
+
+Section ordered_coind.
+  Variable P : stream nat -> Prop.
+
+  Hypothesis Head_case : forall a s, P (Cons a s) -> a <= head s.
+  Hypothesis Tail_case : forall a s, P (Cons a s) -> P s.
+
+  Theorem ordered_coind : forall s, P s -> ordered s.
+  Proof.
+    cofix; intros; destruct s;
+      apply (OrdCons (Head_case H));
+      apply Tail_case in H;
+      apply ordered_coind.
+    assumption.
+  Qed.
+End ordered_coind.
+
+Require Import Arith.
+
+Lemma ord_nats_S : forall n, ordered (iterate S n).
+Proof.
+  cofix; intros; rewrite id_force_eq; constructor;
+  [ simpl; apply le_S; apply le_n | apply ord_nats_S ].
+Qed.
+
+Theorem ord_nats : ordered nats.
+Proof.
+  apply (ord_nats_S 0).
+Qed.
