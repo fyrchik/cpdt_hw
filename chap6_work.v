@@ -32,3 +32,6 @@ Lemma e4 : even 4. crush. Qed.
 
 Eval compute in sum e4 e6.
 Eval compute in proj1_sig (sum e4 e6).
+
+Locate "{ _ } + { _ }".
+Print sumbool.
