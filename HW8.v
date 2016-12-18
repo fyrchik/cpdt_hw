@@ -458,6 +458,16 @@ Definition pred_strong7 : forall n : nat, {{m | n = S m}}.
 Defined.
 
 (* Exercise (Optional): Do the same for head. *)
+Notation "[| x , y |]" := (Found _ x y).
+
+Definition head_strong7 {A : Set} : forall l : list A, {{ h | ex (fun t => h :: t = l)}}.
+  refine (fun l =>
+    match l with
+    | nil => ??
+    | h :: t => [| h , ex_intro _ t (eq_refl (h :: t)) |]
+    end
+  ).
+Defined.
 
 Eval compute in pred_strong7 2.
 
@@ -492,8 +502,17 @@ Definition pred_strong8 : forall n : nat, {m : nat | n = S m} + {n = 0}.
 Defined.
 
 Eval compute in pred_strong8 2.
-
 Eval compute in pred_strong8 0.
+
+Definition head_strong8 {A : Set} : forall l : list A,
+    {h : A | ex (fun t => h :: t = l)} + {l = nil}.
+  refine (fun l : list A =>
+    match l return {h : A | ex (fun t => h :: t = l)} + {l = nil} with
+    | nil => inright _ _
+    | h :: t => inleft _ (exist _ h (ex_intro _ t _))
+    end
+  ); reflexivity.
+Defined.
 
 (* Composing specified functions
 
@@ -526,6 +545,14 @@ Definition doublePred : forall n1 n2 : nat, {{p | n1 = S (fst p) /\ n2 = S (snd 
 Defined.
 
 (* Exercise (Optional): do the same for head. *)
+Definition doubleHead {A B : Set} : forall (l1 : list A) (l2 : list B),
+    {{p | ex (fun t => fst p :: t = l1) /\ ex (fun t => snd p :: t = l2)}}.
+  refine (fun l1 l2 =>
+    h1 <- head_strong7 l1;
+    h2 <- head_strong7 l2;
+    [|(h1, h2)|]
+  ); tauto.
+Defined.
 
 (** We can build a [sumor] version of the "bind" notation and use it
 to write a similarly straightforward version of this function. *)
