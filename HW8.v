@@ -232,7 +232,7 @@ Hint Unfold pred_strong1.
 Definition pred2_partial : forall n : nat, n > 1 -> nat. Print gt_trans.
   refine (fun n p =>
     pred_strong1 (_ : pred_strong1 (gt_trans n 1 O p (gt_Sn_O O)) > 0)
-  ); unfold pred_strong1; destruct n; crush.
+  ); unfold pred_strong1; destruct n; crush. Qed.
 
 
 (*
@@ -395,10 +395,7 @@ Section In_dec.
   Defined.
 End In_dec.
 
-
 Eval compute in In_dec eq_nat_dec 2 (1 :: 2 :: nil).
-
-
 Eval compute in In_dec eq_nat_dec 3 (1 :: 2 :: nil).
 
 (* Exercise (30 min.): Write a decidable equality function for
@@ -406,6 +403,26 @@ list A, assuming a decidable equality for A.
 
 Hint: It might be good to start with some new notation...
 *)
+
+Section eq_list_dec.
+  Variable A : Set.
+
+  Hypothesis A_eq_dec : forall x y : A, {x = y} + {x <> y}.
+
+  Notation "x && y" := (if x then Reduce y else No).
+
+  Definition list_A_eq_dec : forall l1 l2 : list A, {l1 = l2} + {~ l1 = l2}.
+    refine (fix f (l1 l2 : list A ) : {l1 = l2} + {~ l1 = l2} :=
+      match l1, l2 with
+      | nil, nil => Yes
+      | h1 :: t1, h2 :: t2 => A_eq_dec h1 h2 && f t1 t2
+      | h :: t , _ => No
+      | _, h :: t => No
+      end
+    ); crush.
+  Qed.
+
+End eq_list_dec.
 
 (** * Partial Subset Types *)
 
