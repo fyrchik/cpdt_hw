@@ -27,8 +27,23 @@ Section plist.
     | PCons x n l => x :: plistOut n l
     end.
 
+  Fixpoint countP {A : Type} {P Q : A -> Prop} (p : forall x : A, sumbool (P x) (Q x)) (l : list A) :=
+    match l with
+    | nil => O
+    | cons x xs => if p x then S (countP p xs) else countP p xs
+    end.
+
   Fixpoint plistIn (pdec : forall x, { P x } + { ~ P x }) (l : list A) :
-    { n : nat & { pl : plist n | length (filter (fun e : A => if pdec e then true else false) l) = n }}.
-  induction l; simpl. Check (existT (fun _ => ) O).
+    { n : nat & { pl : plist n | countP pdec l = n }}.
+  induction l; simpl. Print existT.
+  refine (existT (fun k : nat => {_ : plist k | O = k}) O _).
+  Print sig. refine (exist _ PNone (eq_refl O)).
+  destruct (pdec a). inversion IHl.
+  refine (existT _ (S x) _).
+  inversion H. Print exist. Print f_equal.
+  refine (exist _ (PSat a p x x0) (f_equal S H0)).
+  inversion IHl.
+  refine (existT _ x _). apply H.
+  Defined.
 
 End plist.
