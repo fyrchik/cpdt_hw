@@ -33,7 +33,10 @@ Section plist.
     | cons x xs => if p x then S (countP p xs) else countP p xs
     end.
 
-  Fixpoint plistIn (pdec : forall x, { P x } + { ~ P x }) (l : list A) :
+
+  Variable pdec : forall x, { P x } + { ~ P x }.
+
+  Fixpoint plistIn (l : list A) :
     { n : nat & { pl : plist n | countP pdec l = n }}.
   induction l; simpl. Print existT.
   refine (existT (fun k : nat => {_ : plist k | O = k}) O _).
@@ -44,6 +47,6 @@ Section plist.
   refine (exist _ (PSat a p x x0) (f_equal S H0)).
   inversion IHl.
   refine (existT _ x _). apply H.
-  Defined.
+  Defined. Print plistIn.
 
 End plist.
