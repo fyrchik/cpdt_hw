@@ -1,4 +1,3 @@
-Require Import Cpdt.CpdtTactics.
 Require Import List.
 
 Section plist.
@@ -36,17 +35,32 @@ Section plist.
 
   Variable pdec : forall x, { P x } + { ~ P x }.
 
-  Fixpoint plistIn (l : list A) :
-    { n : nat & { pl : plist n | countP pdec l = n }}.
-  induction l; simpl. Print existT.
-  refine (existT (fun k : nat => {_ : plist k | O = k}) O _).
-  Print sig. refine (exist _ PNone (eq_refl O)).
-  destruct (pdec a). inversion IHl.
-  refine (existT _ (S x) _).
-  inversion H. Print exist. Print f_equal.
-  refine (exist _ (PSat a p x x0) (f_equal S H0)).
-  inversion IHl.
-  refine (existT _ x _). apply H.
-  Defined. Print plistIn.
+  Fixpoint plistIn (l : list A) : plist (countP pdec l) :=
+    match l return plist (countP pdec l) with
+    | nil => PNone
+    | x :: xs =>
+        match pdec x as s
+          return plist (if s then (S (countP pdec xs))
+                            else (countP pdec xs)) with
+        | left h => PSat x h _ (plistIn xs)
+        | right _ => PCons x _ (plistIn xs)
+        end
+    end.
+
+  Theorem in_out_inverse : forall l, plistOut _ (plistIn l) = l.
+  Proof.
+    induction l.
+      reflexivity.
+      simpl; destruct (pdec a); simpl;
+        rewrite IHl; reflexivity.
+  Qed.
+
+  Fixpoint grab (n : nat) (ls : plist (S n)) : sig P :=
+    match ls with
+    | PNone => tt
+    | PSat x h _ _ => exist _ x h
+    | PCons x O xs => tt
+    | PCons x (S len) xs => grab len xs
+    end.
 
 End plist.

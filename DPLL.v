@@ -123,7 +123,10 @@ Definition dpllAux : forall (t : tVals) (f : TFormula), nat ->
     match bound with
     | O => None
     | S n' =>
-        match f with
+        match f return option (
+    {truth : tVals | formulaTrue truth f } +
+    {forall truth, ~ formulaTrue truth f }
+  ) with
         | nil => Some (inleft _)
         | c :: fr =>
             match c with
@@ -131,10 +134,9 @@ Definition dpllAux : forall (t : tVals) (f : TFormula), nat ->
             | (v,n) :: cr =>
                 let sv := setVar t v in
                 let r1 := dpll (sv true) (simplify (sv true) f) n' in
-                let r2 := dpll (sv false) (simplify (sv false) f) n' in
                   match r1 with
                   | Some (inleft _) => Some (inleft _)
-                  | _ =>
+                  | _ => let r2 := dpll (sv false) (simplify (sv false) f) n' in
                       match r2 with
                       | Some (inleft _) => Some (inleft _)
                       | Some (inright _) => Some (inright _)
@@ -144,3 +146,9 @@ Definition dpllAux : forall (t : tVals) (f : TFormula), nat ->
             end
         end
     end).
+
+Hint Unfold formulaTrue.
+    exists t; crush.
+    unfold not; intros; unfold formulaTrue in H; simpl in H.
+    inversion H.
+Print sig.
